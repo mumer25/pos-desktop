@@ -21,7 +21,7 @@ export default function Sidebar({ open, onClose }) {
       {/* Sidebar */}
       <div
         className={`
-          fixed top-14 left-0 h-[calc(100%-56px)] w-30 bg-white text-black p-4 z-30
+          fixed top-16 left-0 h-[calc(100%-56px)] w-30 bg-white text-black p-4 z-30
           transform transition-transform duration-300 ease-in-out
           ${open ? "translate-x-0" : "-translate-x-full"}
         `}
