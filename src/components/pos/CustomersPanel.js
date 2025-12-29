@@ -1,7 +1,7 @@
 export default function CustomersPanel({ customers = [], onSelect, selected }) {
   return (
-    <div className="w-80 bg-white p-4 border-r overflow-y-auto">
-      <h2 className="text-lg font-semibold mb-4">Customers</h2>
+    <div className="w-80 bg-white p-4 border-r border-gray-300 overflow-y-auto">
+      <h2 className="text-lg text-gray-500 font-semibold mb-4 text-center">Customers</h2>
 
       <div className="flex flex-col gap-2">
         {customers.map((c) => {

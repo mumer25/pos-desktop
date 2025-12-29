@@ -2,8 +2,8 @@ export default function CartPanel({ cart, customer, onRemove, children }) {
   const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
   return (
-    <div className="w-80 bg-white p-4 border-l overflow-y-auto flex flex-col">
-      <h2 className="text-lg font-semibold mb-4">Cart</h2>
+    <div className="w-80 bg-white p-4 border-l border-gray-300 overflow-y-auto flex flex-col">
+      <h2 className="text-lg text-gray-500 font-semibold text-center mb-4">Cart</h2>
 
       {customer ? (
         <div className="mb-2 text-sm text-gray-700">

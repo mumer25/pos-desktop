@@ -3,7 +3,7 @@ import Image from "next/image";
 export default function ItemsPanel({ items, onAdd }) {
   return (
     <div className="flex-1 p-4 overflow-y-auto">
-      <h2 className="text-lg font-semibold mb-4">Items</h2>
+      <h2 className="text-lg text-gray-500 font-semibold text-center mb-4">Items</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {items.map((item) => (
           <div
