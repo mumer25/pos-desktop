@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "@/components/pos/Header";
 import Toolbar from "@/components/pos/Toolbar";
 import OrderList from "@/components/pos/OrderList";
 import ProductBrowser from "@/components/pos/ProductBrowser";
 import Sidebar from "@/components/pos/Sidebar";
-import BottomActions from "@/components/pos/BottomActions";
 
 export default function POSPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,6 +14,16 @@ export default function POSPage() {
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
+  // Charges lifted here
+  const [discount, setDiscount] = useState(0);
+  const [orderTax, setOrderTax] = useState(0);
+  const [shipping, setShipping] = useState(0);
+  const [packingService, setPackingService] = useState(0);
+
+  // Toolbar search ref for autofocus
+  const searchRef = useRef(null);
+
+  // Fetch initial data
   useEffect(() => {
     async function fetchData() {
       if (typeof window !== "undefined" && window.api) {
@@ -27,6 +36,7 @@ export default function POSPage() {
     fetchData();
   }, []);
 
+  // Add product
   const addProduct = (product) => {
     const existing = orderItems.find((i) => i.id === product.id);
     if (existing) {
@@ -44,46 +54,53 @@ export default function POSPage() {
     setOrderItems(orderItems.filter((i) => i.id !== productId));
   };
 
-  const handleCheckout = async () => {
+  // Compute totals including charges
+  const itemsSubTotal = orderItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const calculatedDiscount = (itemsSubTotal * discount) / 100;
+  const calculatedTax = (itemsSubTotal * orderTax) / 100;
+  const totalPayable = Math.max(
+    0,
+    itemsSubTotal - calculatedDiscount + calculatedTax + shipping + packingService
+  );
+
+  // Handle transaction
+  const handleTransaction = async (status, paymentData) => {
     if (!selectedCustomer) return alert("Please select a customer");
     if (orderItems.length === 0) return alert("Cart is empty");
 
-    if (window.api) {
-      const result = await window.api.saveTransaction(
-        selectedCustomer.id,
-        orderItems
-      );
-      alert(`Transaction saved!\nID: ${result.transactionId}\nTotal: ${result.total}`);
-      setOrderItems([]);
+    // final amount to pass
+    const finalAmount =
+      status === "paid"
+        ? paymentData?.amount ?? totalPayable
+        : totalPayable;
+
+    const result = await window.api.saveTransaction(
+      selectedCustomer.id,
+      orderItems,
+      status,
+      finalAmount
+      // paymentData || { amount: totalPayable, method: paymentData?.method || "cash" }
+    );
+
+    let msg = "";
+    if (status === "paid") msg = `Payment completed!`;
+    else if (status === "suspend") msg = `Order suspended!`;
+    else if (status === "quotation") msg = `Quotation saved!`;
+
+    alert(`${msg}\nTransaction ID: ${result.transactionId}\nTotal: ${finalAmount.toFixed(2)}`);
+
+    setOrderItems([]);
+    // Reset charges
+    setDiscount(0);
+    setOrderTax(0);
+    setShipping(0);
+    setPackingService(0);
+
+    // Reset search input
+    if (searchRef.current) {
+      searchRef.current.focus();
     }
   };
-
- const handleTransaction = async (status) => {
-  if (!selectedCustomer) {
-    alert("Please select a customer");
-    return;
-  }
-  if (orderItems.length === 0) {
-    alert("Cart is empty");
-    return;
-  }
-
-  const result = await window.api.saveTransaction(
-    selectedCustomer.id,
-    orderItems,
-    status
-  );
-
-  let msg = "";
-  if (status === "paid") msg = `Payment completed!`;
-  else if (status === "suspend") msg = `Order suspended!`;
-  else if (status === "quotation") msg = `Quotation saved!`;
-
-  alert(`${msg}\nTransaction ID: ${result.transactionId}\nTotal: ${result.total}`);
-  setOrderItems([]);
-};
-
-
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -97,35 +114,325 @@ export default function POSPage() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <Toolbar
+        ref={searchRef}
         customers={customers}
         selectedCustomer={selectedCustomer}
         onSelectCustomer={setSelectedCustomer}
+        products={products}
+        onAddProduct={addProduct}
       />
 
       <div className="flex-1 p-2 grid grid-cols-1 md:grid-cols-12 gap-2 overflow-hidden">
         <div className="md:col-span-6 bg-white p-4 shadow flex flex-col h-full overflow-y-auto rounded">
-          <OrderList items={orderItems} setItems={setOrderItems} />
+          <OrderList
+            items={orderItems}
+            setItems={setOrderItems}
+            discount={discount}
+            setDiscount={setDiscount}
+            orderTax={orderTax}
+            setOrderTax={setOrderTax}
+            shipping={shipping}
+            setShipping={setShipping}
+            packingService={packingService}
+            setPackingService={setPackingService}
+          />
         </div>
+
         <div className="md:col-span-6 bg-gray-50 p-4 shadow flex flex-col h-full overflow-y-auto rounded">
-          {/* <ProductBrowser products={products} onAdd={addProduct} /> */}
-<ProductBrowser
-  products={products}
-  onAdd={addProduct}
-  onQuotation={() => handleTransaction("quotation")}
-  onSuspend={() => handleTransaction("suspend")}
-  onPayment={() => handleTransaction("paid")}
-/>
-
-
+          <ProductBrowser
+            products={products}
+            onAdd={addProduct}
+            onQuotation={() => handleTransaction("quotation")}
+            onSuspend={() => handleTransaction("suspend")}
+            onPayment={(payment) => handleTransaction("paid", payment)}
+            totalPayable={totalPayable}
+            
+          />
         </div>
       </div>
-
-      {/* <div className="bg-gray-100 p-2 border-t">
-        <BottomActions onCheckout={handleCheckout} />
-      </div> */}
     </div>
   );
 }
+
+
+
+// TotalPayable Calculation Added
+// "use client";
+
+// import { useState, useEffect } from "react";
+// import Header from "@/components/pos/Header";
+// import Toolbar from "@/components/pos/Toolbar";
+// import OrderList from "@/components/pos/OrderList";
+// import ProductBrowser from "@/components/pos/ProductBrowser";
+// import Sidebar from "@/components/pos/Sidebar";
+// import BottomActions from "@/components/pos/BottomActions";
+
+// export default function POSPage() {
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+//   const [orderItems, setOrderItems] = useState([]);
+//   const [products, setProducts] = useState([]);
+//   const [customers, setCustomers] = useState([]);
+//   const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+//   const [paymentData, setPaymentData] = useState(null);
+
+//   useEffect(() => {
+//     async function fetchData() {
+//       if (typeof window !== "undefined" && window.api) {
+//         const dbCustomers = await window.api.getCustomers();
+//         const dbItems = await window.api.getItems();
+//         setCustomers(dbCustomers);
+//         setProducts(dbItems);
+//       }
+//     }
+//     fetchData();
+//   }, []);
+
+//   const addProduct = (product) => {
+//     const existing = orderItems.find((i) => i.id === product.id);
+//     if (existing) {
+//       setOrderItems(
+//         orderItems.map((i) =>
+//           i.id === product.id ? { ...i, qty: i.qty + 1 } : i
+//         )
+//       );
+//     } else {
+//       setOrderItems([...orderItems, { ...product, qty: 1 }]);
+//     }
+//   };
+
+//   const removeProduct = (productId) => {
+//     setOrderItems(orderItems.filter((i) => i.id !== productId));
+//   };
+
+//   const handleCheckout = async () => {
+//     if (!selectedCustomer) return alert("Please select a customer");
+//     if (orderItems.length === 0) return alert("Cart is empty");
+
+//     if (window.api) {
+//       const result = await window.api.saveTransaction(
+//         selectedCustomer.id,
+//         orderItems
+//       );
+//       alert(`Transaction saved!\nID: ${result.transactionId}\nTotal: ${result.total}`);
+//       setOrderItems([]);
+//     }
+//   };
+
+//  const handleTransaction = async (status) => {
+//   if (!selectedCustomer) {
+//     alert("Please select a customer");
+//     return;
+//   }
+//   if (orderItems.length === 0) {
+//     alert("Cart is empty");
+//     return;
+//   }
+
+//   const result = await window.api.saveTransaction(
+//     selectedCustomer.id,
+//     orderItems,
+//     status
+//   );
+
+//   let msg = "";
+//   if (status === "paid") msg = `Payment completed!`;
+//   else if (status === "suspend") msg = `Order suspended!`;
+//   else if (status === "quotation") msg = `Quotation saved!`;
+
+//   alert(`${msg}\nTransaction ID: ${result.transactionId}\nTotal: ${result.total}`);
+//   setOrderItems([]);
+//   setPaymentData(null);
+//   window.dispatchEvent(new Event("pos:resetCharges"));
+
+// };
+
+// const totalPayable = orderItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+//   return (
+//     <div className="flex flex-col h-screen bg-gray-100">
+//       <Header
+//         customers={customers}
+//         selectedCustomer={selectedCustomer}
+//         onSelectCustomer={setSelectedCustomer}
+//         onToggle={() => setSidebarOpen(!sidebarOpen)}
+//       />
+
+//       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+//       <Toolbar
+//         customers={customers}
+//         selectedCustomer={selectedCustomer}
+//         onSelectCustomer={setSelectedCustomer}
+//         products={products}
+//         onAddProduct={addProduct}
+//       />
+
+//       <div className="flex-1 p-2 grid grid-cols-1 md:grid-cols-12 gap-2 overflow-hidden">
+//         <div className="md:col-span-6 bg-white p-4 shadow flex flex-col h-full overflow-y-auto rounded">
+//           <OrderList items={orderItems} setItems={setOrderItems} />
+//         </div>
+//         <div className="md:col-span-6 bg-gray-50 p-4 shadow flex flex-col h-full overflow-y-auto rounded">
+//           {/* <ProductBrowser products={products} onAdd={addProduct} /> */}
+// <ProductBrowser
+//   products={products}
+//   onAdd={addProduct}
+//   onQuotation={() => handleTransaction("quotation")}
+//   onSuspend={() => handleTransaction("suspend")}
+//   onPayment={() => handleTransaction("paid")}
+//   totalPayable={totalPayable}
+//   onConfirmPayment={(payment) => handleTransaction("paid", payment)}
+// />
+
+
+//         </div>
+//       </div>
+
+//       {/* <div className="bg-gray-100 p-2 border-t">
+//         <BottomActions onCheckout={handleCheckout} />
+//       </div> */}
+//     </div>
+//   );
+// }
+
+
+
+
+// "use client";
+
+// import { useState, useEffect } from "react";
+// import Header from "@/components/pos/Header";
+// import Toolbar from "@/components/pos/Toolbar";
+// import OrderList from "@/components/pos/OrderList";
+// import ProductBrowser from "@/components/pos/ProductBrowser";
+// import Sidebar from "@/components/pos/Sidebar";
+// import BottomActions from "@/components/pos/BottomActions";
+
+// export default function POSPage() {
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+//   const [orderItems, setOrderItems] = useState([]);
+//   const [products, setProducts] = useState([]);
+//   const [customers, setCustomers] = useState([]);
+//   const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+//   const [paymentData, setPaymentData] = useState(null);
+
+//   useEffect(() => {
+//     async function fetchData() {
+//       if (typeof window !== "undefined" && window.api) {
+//         const dbCustomers = await window.api.getCustomers();
+//         const dbItems = await window.api.getItems();
+//         setCustomers(dbCustomers);
+//         setProducts(dbItems);
+//       }
+//     }
+//     fetchData();
+//   }, []);
+
+//   const addProduct = (product) => {
+//     const existing = orderItems.find((i) => i.id === product.id);
+//     if (existing) {
+//       setOrderItems(
+//         orderItems.map((i) =>
+//           i.id === product.id ? { ...i, qty: i.qty + 1 } : i
+//         )
+//       );
+//     } else {
+//       setOrderItems([...orderItems, { ...product, qty: 1 }]);
+//     }
+//   };
+
+//   const removeProduct = (productId) => {
+//     setOrderItems(orderItems.filter((i) => i.id !== productId));
+//   };
+
+//   const handleCheckout = async () => {
+//     if (!selectedCustomer) return alert("Please select a customer");
+//     if (orderItems.length === 0) return alert("Cart is empty");
+
+//     if (window.api) {
+//       const result = await window.api.saveTransaction(
+//         selectedCustomer.id,
+//         orderItems
+//       );
+//       alert(`Transaction saved!\nID: ${result.transactionId}\nTotal: ${result.total}`);
+//       setOrderItems([]);
+//     }
+//   };
+
+//  const handleTransaction = async (status) => {
+//   if (!selectedCustomer) {
+//     alert("Please select a customer");
+//     return;
+//   }
+//   if (orderItems.length === 0) {
+//     alert("Cart is empty");
+//     return;
+//   }
+
+//   const result = await window.api.saveTransaction(
+//     selectedCustomer.id,
+//     orderItems,
+//     status
+//   );
+
+//   let msg = "";
+//   if (status === "paid") msg = `Payment completed!`;
+//   else if (status === "suspend") msg = `Order suspended!`;
+//   else if (status === "quotation") msg = `Quotation saved!`;
+
+//   alert(`${msg}\nTransaction ID: ${result.transactionId}\nTotal: ${result.total}`);
+//   setOrderItems([]);
+//   setPaymentData(null);
+// };
+
+// const totalPayable = orderItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+//   return (
+//     <div className="flex flex-col h-screen bg-gray-100">
+//       <Header
+//         customers={customers}
+//         selectedCustomer={selectedCustomer}
+//         onSelectCustomer={setSelectedCustomer}
+//         onToggle={() => setSidebarOpen(!sidebarOpen)}
+//       />
+
+//       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+//       <Toolbar
+//         customers={customers}
+//         selectedCustomer={selectedCustomer}
+//         onSelectCustomer={setSelectedCustomer}
+//         products={products}
+//         onAddProduct={addProduct}
+//       />
+
+//       <div className="flex-1 p-2 grid grid-cols-1 md:grid-cols-12 gap-2 overflow-hidden">
+//         <div className="md:col-span-6 bg-white p-4 shadow flex flex-col h-full overflow-y-auto rounded">
+//           <OrderList items={orderItems} setItems={setOrderItems} />
+//         </div>
+//         <div className="md:col-span-6 bg-gray-50 p-4 shadow flex flex-col h-full overflow-y-auto rounded">
+//           {/* <ProductBrowser products={products} onAdd={addProduct} /> */}
+// <ProductBrowser
+//   products={products}
+//   onAdd={addProduct}
+//   onQuotation={() => handleTransaction("quotation")}
+//   onSuspend={() => handleTransaction("suspend")}
+//   onPayment={() => handleTransaction("paid")}
+//   totalPayable={totalPayable}
+//   onConfirmPayment={(payment) => handleTransaction("paid", payment)}
+// />
+
+
+//         </div>
+//       </div>
+
+//       {/* <div className="bg-gray-100 p-2 border-t">
+//         <BottomActions onCheckout={handleCheckout} />
+//       </div> */}
+//     </div>
+//   );
+// }
 
 
 
