@@ -41,7 +41,7 @@ export default function ProductBrowser({ products, onAdd, onQuotation, onSuspend
 
       {/* Bottom action buttons */}
       <div className="flex gap-2 mt-4 p-2 border-t border-gray-200">
-        <button onClick={onQuotation} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300">
+        <button onClick={onQuotation} className="flex-1 bg-gray-300 text-gray-700 py-2 rounded hover:bg-gray-300">
           Quotation
         </button>
         <button onClick={onSuspend} className="flex-1 bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600">

@@ -26,7 +26,7 @@ db.prepare(`
   )
 `).run();
 
-db.prepare(`DROP TABLE IF EXISTS transactions`).run();
+// db.prepare(`DROP TABLE IF EXISTS transactions`).run();
 
 // Transactions table
 db.prepare(`
