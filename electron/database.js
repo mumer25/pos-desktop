@@ -7,6 +7,8 @@ const db = new Database(dbPath);
 
 // ======= TABLES =======
 
+// db.prepare(`DROP TABLE IF EXISTS customers`).run();
+
 // Customers table
 db.prepare(`
   CREATE TABLE IF NOT EXISTS customers (
@@ -17,7 +19,7 @@ db.prepare(`
 `).run();
 
 
-db.prepare(`DROP TABLE IF EXISTS items`).run();
+// db.prepare(`DROP TABLE IF EXISTS items`).run();
 
 // Items table
 db.prepare(`
@@ -43,6 +45,9 @@ db.prepare(`
   )
 `).run();
 
+// db.prepare(`DROP TABLE IF EXISTS transaction_line`).run();
+
+
 // Transaction lines table
 db.prepare(`
   CREATE TABLE IF NOT EXISTS transaction_line (
@@ -63,7 +68,7 @@ if (customersCount === 0) {
   const pakistaniCustomers = [
     ["Ali Khan", "03001234567"],
     ["Sara Ahmed", "03211234567"],
-    ["Hassan Raza", "03331234567"],
+    ["Noman", "03331234567"],
     ["Fatima Qureshi", "03451234567"],
     ["Bilal Shah", "03061234567"]
   ];

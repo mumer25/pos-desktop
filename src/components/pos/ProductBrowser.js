@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import toast, { Toaster } from "react-hot-toast";
 
+
 export default function ProductBrowser({
   products,
   onAdd,
@@ -64,6 +65,7 @@ export default function ProductBrowser({
   };
 
   return (
+    <>
     <div className="flex flex-col h-full relative">
       {/* Toast container */}
       <Toaster position="top-right" reverseOrder={false} />
@@ -86,7 +88,7 @@ export default function ProductBrowser({
       </div>
 
       {/* Product grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 flex-1 overflow-y-auto pb-4">
+      <div className="product-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 flex-1 overflow-y-auto pb-4">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full text-center text-gray-400 py-6">
             {`No products found in "${activeCategory}" category.`}
@@ -216,6 +218,22 @@ export default function ProductBrowser({
         </button>
       </div>
     </div>
+
+
+
+{/* Styles */}
+       <style jsx>{`
+  .product-grid::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; /* optional: hide background */
+  }
+  .product-grid {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+`}</style>
+    </>
+
   );
 }
 
