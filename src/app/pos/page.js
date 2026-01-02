@@ -6,6 +6,7 @@ import Toolbar from "@/components/pos/Toolbar";
 import OrderList from "@/components/pos/OrderList";
 import ProductBrowser from "@/components/pos/ProductBrowser";
 import Sidebar from "@/components/pos/Sidebar";
+import toast, { Toaster } from "react-hot-toast"; // ✅ toast import
 
 export default function POSPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -13,8 +14,9 @@ export default function POSPage() {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [orderStatus, setOrderStatus] = useState("none"); // "none", "quotation", "suspend", "paid"
 
-  // Charges lifted here
+  // Charges
   const [discount, setDiscount] = useState(0);
   const [orderTax, setOrderTax] = useState(0);
   const [shipping, setShipping] = useState(0);
@@ -22,6 +24,23 @@ export default function POSPage() {
 
   // Toolbar search ref for autofocus
   const searchRef = useRef(null);
+
+  useEffect(() => {
+    if (orderItems.length === 0) {
+      searchRef.current?.focus();
+    }
+  }, [orderItems]);
+
+  useEffect(() => {
+    if (window.electron) {
+      window.electron.onWindowFocus(() => {
+        setTimeout(() => {
+          document.activeElement?.blur();
+          window.focus();
+        }, 0);
+      });
+    }
+  }, []);
 
   // Fetch initial data
   useEffect(() => {
@@ -54,7 +73,7 @@ export default function POSPage() {
     setOrderItems(orderItems.filter((i) => i.id !== productId));
   };
 
-  // Compute totals including charges
+  // Compute totals
   const itemsSubTotal = orderItems.reduce((sum, i) => sum + i.price * i.qty, 0);
   const calculatedDiscount = (itemsSubTotal * discount) / 100;
   const calculatedTax = (itemsSubTotal * orderTax) / 100;
@@ -65,50 +84,60 @@ export default function POSPage() {
 
   // Handle transaction
   const handleTransaction = async (status, paymentData) => {
-    if (!selectedCustomer) return alert("Please select a customer");
-    if (orderItems.length === 0) return alert("Cart is empty");
+    // Validation
+    if (status !== "quotation" && status !== "suspend" && !selectedCustomer) {
+      return toast.error("Please select a customer");
+    }
 
-    // final amount to pass
-    const finalAmount =
-      status === "paid"
-        ? paymentData?.amount ?? totalPayable
-        : totalPayable;
+    if ((status === "quotation" || status === "paid" || status === "suspend") && orderItems.length === 0) {
+      return toast.error("Cart is empty");
+    }
 
-    const result = await window.api.saveTransaction(
-      selectedCustomer.id,
-      orderItems,
-      status,
-      finalAmount
-      // paymentData || { amount: totalPayable, method: paymentData?.method || "cash" }
-    );
+    const finalAmount = status === "paid" ? paymentData?.amount ?? totalPayable : totalPayable;
+    const customerId = selectedCustomer ? selectedCustomer.id : null;
 
-    let msg = "";
-    if (status === "paid") msg = `Payment completed!`;
-    else if (status === "suspend") msg = `Order suspended!`;
-    else if (status === "quotation") msg = `Quotation saved!`;
+    try {
+      const result = await window.api.saveTransaction(customerId, orderItems, status, finalAmount);
 
-    alert(`${msg}\nTransaction ID: ${result.transactionId}\nTotal: ${finalAmount.toFixed(2)}`);
+      let msg = "";
+      if (status === "paid") msg = "Payment completed!";
+      else if (status === "suspend") msg = "Order suspended!";
+      else if (status === "quotation") msg = "Quotation saved!";
 
-    setOrderItems([]);
-    // Reset charges
-    setDiscount(0);
-    setOrderTax(0);
-    setShipping(0);
-    setPackingService(0);
+      toast.success(`${msg} (Transaction ID: ${result.transactionId})\nTotal: Rs.${finalAmount.toFixed(2)}`);
 
-    // Reset search input
-    if (searchRef.current) {
-      searchRef.current.focus();
+      setOrderStatus(status);
+
+      if (status === "paid" || status === "suspend") {
+        setOrderItems([]);
+        setDiscount(0);
+        setOrderTax(0);
+        setShipping(0);
+        setPackingService(0);
+      }
+
+      // Reset search input
+      if (searchRef.current) {
+        setTimeout(() => {
+          searchRef.current?.focus();
+        }, 0);
+      }
+    } catch (err) {
+      toast.error("Transaction failed: " + err.message);
     }
   };
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
+      {/* Toast container */}
+      <Toaster position="top-right" reverseOrder={false} />
+
       <Header
         customers={customers}
         selectedCustomer={selectedCustomer}
         onSelectCustomer={setSelectedCustomer}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
+        orderStatus={orderStatus}
       />
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -146,13 +175,188 @@ export default function POSPage() {
             onSuspend={() => handleTransaction("suspend")}
             onPayment={(payment) => handleTransaction("paid", payment)}
             totalPayable={totalPayable}
-            
+            orderStatus={orderStatus}
           />
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
+// 2-1-2026
+// "use client";
+
+// import { useState, useEffect, useRef } from "react";
+// import Header from "@/components/pos/Header";
+// import Toolbar from "@/components/pos/Toolbar";
+// import OrderList from "@/components/pos/OrderList";
+// import ProductBrowser from "@/components/pos/ProductBrowser";
+// import Sidebar from "@/components/pos/Sidebar";
+
+// export default function POSPage() {
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+//   const [orderItems, setOrderItems] = useState([]);
+//   const [products, setProducts] = useState([]);
+//   const [customers, setCustomers] = useState([]);
+//   const [selectedCustomer, setSelectedCustomer] = useState(null);
+//   // POSPage.jsx
+// const [orderStatus, setOrderStatus] = useState("none"); // "none", "quotation", "suspend", "paid"
+
+
+//   // Charges lifted here
+//   const [discount, setDiscount] = useState(0);
+//   const [orderTax, setOrderTax] = useState(0);
+//   const [shipping, setShipping] = useState(0);
+//   const [packingService, setPackingService] = useState(0);
+
+//   // Toolbar search ref for autofocus
+//   const searchRef = useRef(null);
+
+//   // Fetch initial data
+//   useEffect(() => {
+//     async function fetchData() {
+//       if (typeof window !== "undefined" && window.api) {
+//         const dbCustomers = await window.api.getCustomers();
+//         const dbItems = await window.api.getItems();
+//         setCustomers(dbCustomers);
+//         setProducts(dbItems);
+//       }
+//     }
+//     fetchData();
+//   }, []);
+
+//   // Add product
+//   const addProduct = (product) => {
+//     const existing = orderItems.find((i) => i.id === product.id);
+//     if (existing) {
+//       setOrderItems(
+//         orderItems.map((i) =>
+//           i.id === product.id ? { ...i, qty: i.qty + 1 } : i
+//         )
+//       );
+//     } else {
+//       setOrderItems([...orderItems, { ...product, qty: 1 }]);
+//     }
+//   };
+
+//   const removeProduct = (productId) => {
+//     setOrderItems(orderItems.filter((i) => i.id !== productId));
+//   };
+
+//   // Compute totals including charges
+//   const itemsSubTotal = orderItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+//   const calculatedDiscount = (itemsSubTotal * discount) / 100;
+//   const calculatedTax = (itemsSubTotal * orderTax) / 100;
+//   const totalPayable = Math.max(
+//     0,
+//     itemsSubTotal - calculatedDiscount + calculatedTax + shipping + packingService
+//   );
+
+//   // Handle transaction
+//   const handleTransaction = async (status, paymentData) => {
+//     // if (!selectedCustomer) return alert("Please select a customer");
+//     // if (orderItems.length === 0) return alert("Cart is empty");
+
+//      if (status !== "quotation" && status !== "suspend" && !selectedCustomer) 
+//     return alert("Please select a customer");
+  
+//   if ((status === "quotation" || status === "paid" || status === "suspend") && orderItems.length === 0) 
+//     return alert("Cart is empty");
+
+//     // final amount to pass
+//     const finalAmount =
+//       status === "paid"
+//         ? paymentData?.amount ?? totalPayable
+//         : totalPayable;
+
+//         const customerId = selectedCustomer ? selectedCustomer.id : null;
+
+//     const result = await window.api.saveTransaction(
+//       customerId,
+//       orderItems,
+//       status,
+//       finalAmount
+//       // paymentData || { amount: totalPayable, method: paymentData?.method || "cash" }
+//     );
+
+//     let msg = "";
+//     if (status === "paid") msg = `Payment completed!`;
+//     else if (status === "suspend") msg = `Order suspended!`;
+//     else if (status === "quotation") msg = `Quotation saved!`;
+
+//     alert(`${msg}\nTransaction ID: ${result.transactionId}\nTotal: ${finalAmount.toFixed(2)}`);
+
+//     setOrderStatus(status);
+//    if (status === "paid" || status === "suspend") {
+//     setOrderItems([]);
+//     setDiscount(0);
+//     setOrderTax(0);
+//     setShipping(0);
+//     setPackingService(0);
+//   }
+
+//     // Reset search input
+//     if (searchRef.current) {
+//       searchRef.current.focus();
+//     }
+//   };
+
+//   return (
+//     <div className="flex flex-col h-screen bg-gray-100">
+//       <Header
+//         customers={customers}
+//         selectedCustomer={selectedCustomer}
+//         onSelectCustomer={setSelectedCustomer}
+//         onToggle={() => setSidebarOpen(!sidebarOpen)}
+//         orderStatus={orderStatus}
+//       />
+
+//       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+//       <Toolbar
+//         ref={searchRef}
+//         customers={customers}
+//         selectedCustomer={selectedCustomer}
+//         onSelectCustomer={setSelectedCustomer}
+//         products={products}
+//         onAddProduct={addProduct}
+//       />
+
+//       <div className="flex-1 p-2 grid grid-cols-1 md:grid-cols-12 gap-2 overflow-hidden">
+//         <div className="md:col-span-6 bg-white p-4 shadow flex flex-col h-full overflow-y-auto rounded">
+//           <OrderList
+//             items={orderItems}
+//             setItems={setOrderItems}
+//             discount={discount}
+//             setDiscount={setDiscount}
+//             orderTax={orderTax}
+//             setOrderTax={setOrderTax}
+//             shipping={shipping}
+//             setShipping={setShipping}
+//             packingService={packingService}
+//             setPackingService={setPackingService}
+//           />
+//         </div>
+
+//         <div className="md:col-span-6 bg-gray-50 p-4 shadow flex flex-col h-full overflow-y-auto rounded">
+//           <ProductBrowser
+//             products={products}
+//             onAdd={addProduct}
+//             onQuotation={() => handleTransaction("quotation")}
+//             onSuspend={() => handleTransaction("suspend")}
+//             onPayment={(payment) => handleTransaction("paid", payment)}
+//             totalPayable={totalPayable}
+//             orderStatus={orderStatus}
+            
+//           />
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 
 

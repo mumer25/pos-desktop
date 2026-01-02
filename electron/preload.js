@@ -1,7 +1,38 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld('api', {
-  getCustomers: () => ipcRenderer.invoke('get-customers'),
-  getItems: () => ipcRenderer.invoke('get-items'),
-  saveTransaction: (customerId, cart) => ipcRenderer.invoke('save-transaction', customerId, cart),
+contextBridge.exposeInMainWorld("api", {
+  getCustomers: () => ipcRenderer.invoke("get-customers"),
+  getItems: () => ipcRenderer.invoke("get-items"),
+  saveTransaction: (customerId, cart, status = "paid") =>
+    ipcRenderer.invoke("save-transaction", customerId, cart, status),
 });
+
+contextBridge.exposeInMainWorld("electron", {
+  onWindowFocus: (callback) =>
+    ipcRenderer.on("electron-window-focused", callback),
+});
+
+
+
+// 2-1-2026
+// const { contextBridge, ipcRenderer } = require('electron');
+
+// contextBridge.exposeInMainWorld('api', {
+//   getCustomers: () => ipcRenderer.invoke('get-customers'),
+//   getItems: () => ipcRenderer.invoke('get-items'),
+//   saveTransaction: (customerId, cart, status = 'paid') =>
+//     ipcRenderer.invoke('save-transaction', customerId, cart, status),
+// });
+
+
+
+
+
+
+// const { contextBridge, ipcRenderer } = require('electron');
+
+// contextBridge.exposeInMainWorld('api', {
+//   getCustomers: () => ipcRenderer.invoke('get-customers'),
+//   getItems: () => ipcRenderer.invoke('get-items'),
+//   saveTransaction: (customerId, cart) => ipcRenderer.invoke('save-transaction', customerId, cart),
+// });

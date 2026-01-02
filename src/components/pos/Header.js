@@ -1,12 +1,11 @@
 "use client";
 import { useState } from "react";
 
-export default function Header({ onToggle }) {
+export default function Header({ onToggle, orderStatus }) {
   return (
     <div className="h-16 bg-blue-600 text-white flex items-center justify-between px-4 shadow relative">
       {/* Left Section: Toggle + Location */}
       <div className="flex items-center gap-3">
-        {/* Toggle Button */}
         <button
           onClick={onToggle}
           className="text-white text-xl p-2 rounded hover:bg-blue-500 transition z-50"
@@ -14,10 +13,17 @@ export default function Header({ onToggle }) {
           ☰
         </button>
 
-        {/* Location */}
         <div className="flex items-center gap-1">
           <span className="font-medium">Location:</span>
           <span className="font-bold">Main Branch</span>
+        </div>
+
+        {/* Order Status */}
+        <div className="flex items-center gap-1 ml-4">
+          <span className="font-medium">Order Status:</span>
+          <span className="font-bold">
+            {orderStatus === "none" ? "Idle" : orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1)}
+          </span>
         </div>
       </div>
 
@@ -33,6 +39,44 @@ export default function Header({ onToggle }) {
     </div>
   );
 }
+
+
+
+// "use client";
+// import { useState } from "react";
+
+// export default function Header({ onToggle }) {
+//   return (
+//     <div className="h-16 bg-blue-600 text-white flex items-center justify-between px-4 shadow relative">
+//       {/* Left Section: Toggle + Location */}
+//       <div className="flex items-center gap-3">
+//         {/* Toggle Button */}
+//         <button
+//           onClick={onToggle}
+//           className="text-white text-xl p-2 rounded hover:bg-blue-500 transition z-50"
+//         >
+//           ☰
+//         </button>
+
+//         {/* Location */}
+//         <div className="flex items-center gap-1">
+//           <span className="font-medium">Location:</span>
+//           <span className="font-bold">Main Branch</span>
+//         </div>
+//       </div>
+
+//       {/* Right Section: Action Buttons */}
+//       <div className="flex items-center gap-4">
+//         <button className="bg-black px-3 py-1 rounded hover:bg-green-600">
+//           Add Expense
+//         </button>
+//         <button className="bg-black px-3 py-1 rounded hover:bg-yellow-600">
+//           Recent Transactions
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
 
 
 
