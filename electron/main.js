@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { getCustomers, getItems, saveTransaction } = require('./database');
+const { getCustomers, getItems, saveTransaction, getTransactions  } = require('./database');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -39,14 +39,18 @@ ipcMain.handle('get-customers', async () => getCustomers());
 ipcMain.handle('get-items', async () => getItems());
 
 // Save transaction — accepts status argument
-ipcMain.handle('save-transaction', async (event, customerId, cart, status = 'paid') => {
+ipcMain.handle('save-transaction', async (event, customerId, cart, status = 'paid', total) => {
   try {
-    const result = saveTransaction(customerId, cart, status);
+    const result = saveTransaction(customerId, cart, status,total);
     return result;
   } catch (err) {
     console.error(err);
     return { error: err.message };
   }
+});
+
+ipcMain.handle("get-transactions", async () => {
+  return getTransactions();
 });
 
 // App ready

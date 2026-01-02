@@ -6,6 +6,7 @@ import Toolbar from "@/components/pos/Toolbar";
 import OrderList from "@/components/pos/OrderList";
 import ProductBrowser from "@/components/pos/ProductBrowser";
 import Sidebar from "@/components/pos/Sidebar";
+import TransactionsModal from "@/components/pos/TransactionsModal";
 import toast, { Toaster } from "react-hot-toast"; // ✅ toast import
 
 export default function POSPage() {
@@ -23,6 +24,9 @@ export default function POSPage() {
   const [packingService, setPackingService] = useState(0);
 
   const [suspendedOrders, setSuspendedOrders] = useState([]);
+
+  const [showTransactions, setShowTransactions] = useState(false);
+const [transactions, setTransactions] = useState([]);
 
   // Toolbar search ref for autofocus
   const searchRef = useRef(null);
@@ -148,6 +152,13 @@ const handleDeleteSuspended = (orderId) => {
   setSuspendedOrders(suspendedOrders.filter((o) => o.id !== orderId));
 };
 
+
+const openTransactions = async () => {
+  const data = await window.api.getTransactions();
+  setTransactions(data);
+  setShowTransactions(true);
+};
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Toast container */}
@@ -161,6 +172,7 @@ const handleDeleteSuspended = (orderId) => {
   orderStatus={orderStatus}
   suspendedOrders={suspendedOrders}
   onDeleteSuspended={handleDeleteSuspended}
+  onOpenTransactions={openTransactions}
   onLoadSuspended={(order) => {
     setOrderItems(order.items);
     setDiscount(order.discount);
@@ -184,6 +196,13 @@ const handleDeleteSuspended = (orderId) => {
         products={products}
         onAddProduct={addProduct}
       />
+
+      <TransactionsModal
+  open={showTransactions}
+  onClose={() => setShowTransactions(false)}
+  transactions={transactions}
+/>
+
 
       <div className="flex-1 p-2 grid grid-cols-1 md:grid-cols-12 gap-2 overflow-hidden">
         <div className="md:col-span-6 bg-white p-4 shadow flex flex-col h-full overflow-y-auto rounded">

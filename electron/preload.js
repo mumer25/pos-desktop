@@ -3,8 +3,11 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("api", {
   getCustomers: () => ipcRenderer.invoke("get-customers"),
   getItems: () => ipcRenderer.invoke("get-items"),
-  saveTransaction: (customerId, cart, status = "paid") =>
-    ipcRenderer.invoke("save-transaction", customerId, cart, status),
+  saveTransaction: (customerId, cart, status = "paid",total) =>
+    ipcRenderer.invoke("save-transaction", customerId, cart, status,total),
+
+  getTransactions: () => ipcRenderer.invoke("get-transactions"),
+
 });
 
 contextBridge.exposeInMainWorld("electron", {

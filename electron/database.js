@@ -108,31 +108,61 @@ function getItems() {
  * @param {Array} cart - array of {id, name, price, qty}
  * @returns {Object} { transactionId, total, date }
  */
-function saveTransaction(customerId, cart, status = "paid") {
-  const total = cart.reduce((acc, i) => acc + i.price * i.qty, 0);
+function saveTransaction(customerId, cart, status = "paid", total) {
   const date = new Date().toISOString();
 
-  const insertTransaction = db.prepare(
-    `INSERT INTO transactions (customer_id, total, date, status) VALUES (?, ?, ?, ?)`
+  const insertTransaction = db.prepare(`
+    INSERT INTO transactions (customer_id, total, date, status)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const result = insertTransaction.run(
+    customerId,
+    total,        // ✅ FINAL AMOUNT FROM FRONTEND
+    date,
+    status
   );
-  const result = insertTransaction.run(customerId, total, date, status);
+
   const transactionId = result.lastInsertRowid;
 
-  const insertLine = db.prepare(
-    `INSERT INTO transaction_line (transaction_id, item_id, qty, total_price) VALUES (?, ?, ?, ?)`
-  );
+  const insertLine = db.prepare(`
+    INSERT INTO transaction_line
+    (transaction_id, item_id, qty, total_price)
+    VALUES (?, ?, ?, ?)
+  `);
 
   const insertMany = db.transaction((cartItems) => {
     for (const item of cartItems) {
-      insertLine.run(transactionId, item.id, item.qty, item.price * item.qty);
+      insertLine.run(
+        transactionId,
+        item.id,
+        item.qty,
+        item.price * item.qty
+      );
     }
   });
 
   insertMany(cart);
+
   return { transactionId, total, date, status };
 }
 
-module.exports = { getCustomers, getItems, saveTransaction };
+
+function getTransactions() {
+  return db.prepare(`
+    SELECT 
+      t.id,
+      t.total,
+      t.date,
+      t.status,
+      c.name AS customer
+    FROM transactions t
+    LEFT JOIN customers c ON c.id = t.customer_id
+    ORDER BY t.id DESC
+  `).all();
+}
+
+module.exports = { getCustomers, getItems, saveTransaction, getTransactions };
 
 
 

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { FaTimes, FaExclamationCircle, FaTrash, FaPlus, FaHistory } from "react-icons/fa";
 
-export default function Header({ onToggle, orderStatus, suspendedOrders = [], onLoadSuspended, onDeleteSuspended }) {
+export default function Header({ onToggle, orderStatus, suspendedOrders = [], onLoadSuspended, onDeleteSuspended, onOpenTransactions }) {
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
 
   return (
@@ -34,7 +34,9 @@ export default function Header({ onToggle, orderStatus, suspendedOrders = [], on
         <button className="flex items-center gap-1 bg-black/80 hover:bg-gray-600 px-3 py-1 rounded transition">
           <FaPlus /> Add Expense
         </button>
-        <button className="flex items-center gap-1 bg-black/80 hover:bg-gray-600 px-3 py-1 rounded transition">
+        <button 
+        onClick={onOpenTransactions}
+        className="flex items-center gap-1 bg-black/80 hover:bg-gray-600 px-3 py-1 rounded transition">
           <FaHistory /> Transactions
         </button>
 
