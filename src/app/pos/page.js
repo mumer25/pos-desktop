@@ -22,6 +22,8 @@ export default function POSPage() {
   const [shipping, setShipping] = useState(0);
   const [packingService, setPackingService] = useState(0);
 
+  const [suspendedOrders, setSuspendedOrders] = useState([]);
+
   // Toolbar search ref for autofocus
   const searchRef = useRef(null);
 
@@ -84,61 +86,93 @@ export default function POSPage() {
 
   // Handle transaction
   const handleTransaction = async (status, paymentData) => {
-    // Validation
-    if (status !== "quotation" && status !== "suspend" && !selectedCustomer) {
-      return toast.error("Please select a customer");
-    }
+  if (status !== "quotation" && status !== "suspend" && !selectedCustomer) 
+    return toast.error("Please select a customer");
 
-    if ((status === "quotation" || status === "paid" || status === "suspend") && orderItems.length === 0) {
-      return toast.error("Cart is empty");
-    }
+  if ((status === "quotation" || status === "paid" || status === "suspend") && orderItems.length === 0) 
+    return toast.error("Cart is empty");
 
-    const finalAmount = status === "paid" ? paymentData?.amount ?? totalPayable : totalPayable;
-    const customerId = selectedCustomer ? selectedCustomer.id : null;
+  const finalAmount = status === "paid" ? paymentData?.amount ?? totalPayable : totalPayable;
+  const customerId = selectedCustomer ? selectedCustomer.id : null;
 
-    try {
-      const result = await window.api.saveTransaction(customerId, orderItems, status, finalAmount);
+  const result = await window.api.saveTransaction(customerId, orderItems, status, finalAmount);
 
-      let msg = "";
-      if (status === "paid") msg = "Payment completed!";
-      else if (status === "suspend") msg = "Order suspended!";
-      else if (status === "quotation") msg = "Quotation saved!";
+  if (status === "suspend") {
+    // Add to suspended orders
+    const suspendedOrder = {
+      id: Date.now(), // unique ID
+      items: [...orderItems],
+      discount,
+      orderTax,
+      shipping,
+      packingService,
+      customer: selectedCustomer,
+      timestamp: new Date(),
+    };
+    setSuspendedOrders([...suspendedOrders, suspendedOrder]);
+    toast.success("Order suspended!");
+  } else if (status === "paid") {
+    toast.success("Payment completed!");
+  } else if (status === "quotation") {
+    toast.success("Quotation saved!");
+  }
 
-      toast.success(`${msg} (Transaction ID: ${result.transactionId})\nTotal: Rs.${finalAmount.toFixed(2)}`);
+  if (status === "paid" || status === "suspend") {
+    // Reset current order
+    setOrderItems([]);
+    setDiscount(0);
+    setOrderTax(0);
+    setShipping(0);
+    setPackingService(0);
+    setSelectedCustomer(null);
+  }
 
-      setOrderStatus(status);
+  setOrderStatus(status);
+  setTimeout(() => searchRef.current?.focus(), 0);
+};
 
-      if (status === "paid" || status === "suspend") {
-        setOrderItems([]);
-        setDiscount(0);
-        setOrderTax(0);
-        setShipping(0);
-        setPackingService(0);
-      }
 
-      // Reset search input
-      if (searchRef.current) {
-        setTimeout(() => {
-          searchRef.current?.focus();
-        }, 0);
-      }
-    } catch (err) {
-      toast.error("Transaction failed: " + err.message);
-    }
-  };
+// Load a suspended order
+const handleLoadSuspended = (order) => {
+  setOrderItems(order.items || []);
+  setDiscount(order.discount || 0);
+  setOrderTax(order.orderTax || 0);
+  setShipping(order.shipping || 0);
+  setPackingService(order.packingService || 0);
+  setSelectedCustomer(order.customer || null);
+  setOrderStatus("none"); // reset status
+};
+
+// Delete a suspended order
+const handleDeleteSuspended = (orderId) => {
+  setSuspendedOrders(suspendedOrders.filter((o) => o.id !== orderId));
+};
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Toast container */}
       <Toaster position="top-right" reverseOrder={false} />
 
-      <Header
-        customers={customers}
-        selectedCustomer={selectedCustomer}
-        onSelectCustomer={setSelectedCustomer}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-        orderStatus={orderStatus}
-      />
+     <Header
+  customers={customers}
+  selectedCustomer={selectedCustomer}
+  onSelectCustomer={setSelectedCustomer}
+  onToggle={() => setSidebarOpen(!sidebarOpen)}
+  orderStatus={orderStatus}
+  suspendedOrders={suspendedOrders}
+  onDeleteSuspended={handleDeleteSuspended}
+  onLoadSuspended={(order) => {
+    setOrderItems(order.items);
+    setDiscount(order.discount);
+    setOrderTax(order.orderTax);
+    setShipping(order.shipping);
+    setPackingService(order.packingService);
+    setSelectedCustomer(order.customer);
+    setOrderStatus("none");
+    setSuspendedOrders(suspendedOrders.filter(o => o.id !== order.id));
+    toast.success("Suspended order loaded!");
+  }}
+/>
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 

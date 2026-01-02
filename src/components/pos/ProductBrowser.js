@@ -91,7 +91,7 @@ export default function ProductBrowser({
           className={`flex-1 py-2 rounded font-medium transition ${
             orderStatus === "quotation"
               ? "bg-blue-600 text-white"
-              : "bg-gray-500 text-white hover:bg-gray-600"
+              : "bg-blue-500 text-white hover:bg-blue-400"
           }`}
         >
           Quotation
