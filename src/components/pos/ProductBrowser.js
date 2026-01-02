@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
-import toast, { Toaster } from "react-hot-toast"; // ✅ add toast
+import toast, { Toaster } from "react-hot-toast";
 
 export default function ProductBrowser({
   products,
@@ -15,6 +15,22 @@ export default function ProductBrowser({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [amount, setAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  // Extract unique categories
+  const categories = useMemo(() => {
+    const cats = ["All"];
+    products.forEach((p) => {
+      if (p.category && !cats.includes(p.category)) cats.push(p.category);
+    });
+    return cats;
+  }, [products]);
+
+  // Filter products based on category
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === "All") return products;
+    return products.filter((p) => p.category === activeCategory);
+  }, [products, activeCategory]);
 
   const isPanelVisible = paymentOpen && totalPayable > 0;
 
@@ -42,10 +58,7 @@ export default function ProductBrowser({
     }
 
     onPayment && onPayment({ amount, paymentMethod });
-
-    // Show success toast instead of alert
     toast.success(`Payment of Rs.${amount.toFixed(2)} via ${paymentMethod} completed`);
-
     setPaymentOpen(false);
     restoreAppFocus();
   };
@@ -57,31 +70,47 @@ export default function ProductBrowser({
 
       {/* Category filter pills */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <button className="px-3 py-1 rounded-full bg-blue-500 text-white">All</button>
-        <button className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">Category 1</button>
-        <button className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">Category 2</button>
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+              activeCategory === cat
+                ? "bg-blue-600 text-white"
+                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
       {/* Product grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 flex-1 overflow-y-auto pb-4">
-        {products.map((p) => (
-          <div
-            key={p.id}
-            onClick={() => onAdd(p)}
-            className="bg-white shadow rounded-lg p-2 cursor-pointer hover:shadow-lg border border-transparent hover:border-blue-300 transition-all flex flex-col items-center"
-          >
-            <div className="w-full h-28 relative mb-2">
-              <Image
-                src={p.image || "/items/placeholder.png"}
-                alt={p.name}
-                fill
-                className="object-cover rounded-md"
-              />
-            </div>
-            <div className="text-center text-sm font-semibold truncate w-full">{p.name}</div>
-            <div className="text-center text-xs text-gray-500">Rs. {p.price}</div>
+        {filteredProducts.length === 0 ? (
+          <div className="col-span-full text-center text-gray-400 py-6">
+            {`No products found in "${activeCategory}" category.`}
           </div>
-        ))}
+        ) : (
+          filteredProducts.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => onAdd(p)}
+              className="bg-white shadow rounded-lg p-2 cursor-pointer hover:shadow-lg border border-transparent hover:border-blue-300 transition-all flex flex-col items-center"
+            >
+              <div className="w-full h-28 relative mb-2">
+                <Image
+                  src={p.image || "/items/placeholder.png"}
+                  alt={p.name}
+                  fill
+                  className="object-cover rounded-md"
+                />
+              </div>
+              <div className="text-center text-sm font-semibold truncate w-full">{p.name}</div>
+              <div className="text-center text-xs text-gray-500">Rs. {p.price}</div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Bottom action buttons */}
@@ -112,14 +141,16 @@ export default function ProductBrowser({
           onClick={handleOpenPayment}
           disabled={totalPayable === 0}
           className={`flex-1 py-2 rounded font-bold text-white transition-all ${
-            totalPayable === 0 ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 shadow-md"
+            totalPayable === 0
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-green-500 hover:bg-green-600 shadow-md"
           }`}
         >
           Payment
         </button>
       </div>
 
-      {/* Payment Panel Overlay Backdrop */}
+      {/* Payment Overlay Backdrop */}
       {isPanelVisible && (
         <div
           className="fixed inset-0 bg-black/30 z-40"
@@ -187,6 +218,198 @@ export default function ProductBrowser({
     </div>
   );
 }
+
+
+
+// "use client";
+// import { useState } from "react";
+// import Image from "next/image";
+// import toast, { Toaster } from "react-hot-toast"; // ✅ add toast
+
+// export default function ProductBrowser({
+//   products,
+//   onAdd,
+//   onQuotation,
+//   onSuspend,
+//   onPayment,
+//   totalPayable = 0,
+//   orderStatus,
+// }) {
+//   const [paymentOpen, setPaymentOpen] = useState(false);
+//   const [amount, setAmount] = useState(0);
+//   const [paymentMethod, setPaymentMethod] = useState("cash");
+
+//   const isPanelVisible = paymentOpen && totalPayable > 0;
+
+//   const restoreAppFocus = () => {
+//     requestAnimationFrame(() => {
+//       document.activeElement?.blur();
+//       window.focus();
+//     });
+//   };
+
+//   const handleOpenPayment = () => {
+//     if (totalPayable <= 0) {
+//       toast.error("No amount to pay");
+//       return;
+//     }
+//     setAmount(totalPayable);
+//     setPaymentMethod("cash");
+//     setPaymentOpen(true);
+//   };
+
+//   const handleConfirmPayment = () => {
+//     if (amount <= 0) {
+//       toast.error("Amount must be greater than 0");
+//       return;
+//     }
+
+//     onPayment && onPayment({ amount, paymentMethod });
+
+//     // Show success toast instead of alert
+//     toast.success(`Payment of Rs.${amount.toFixed(2)} via ${paymentMethod} completed`);
+
+//     setPaymentOpen(false);
+//     restoreAppFocus();
+//   };
+
+//   return (
+//     <div className="flex flex-col h-full relative">
+//       {/* Toast container */}
+//       <Toaster position="top-right" reverseOrder={false} />
+
+//       {/* Category filter pills */}
+//       <div className="flex flex-wrap gap-2 mb-4">
+//         <button className="px-3 py-1 rounded-full bg-blue-500 text-white">All</button>
+//         <button className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">Category 1</button>
+//         <button className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">Category 2</button>
+//       </div>
+
+//       {/* Product grid */}
+//       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 flex-1 overflow-y-auto pb-4">
+//         {products.map((p) => (
+//           <div
+//             key={p.id}
+//             onClick={() => onAdd(p)}
+//             className="bg-white shadow rounded-lg p-2 cursor-pointer hover:shadow-lg border border-transparent hover:border-blue-300 transition-all flex flex-col items-center"
+//           >
+//             <div className="w-full h-28 relative mb-2">
+//               <Image
+//                 src={p.image || "/items/placeholder.png"}
+//                 alt={p.name}
+//                 fill
+//                 className="object-cover rounded-md"
+//               />
+//             </div>
+//             <div className="text-center text-sm font-semibold truncate w-full">{p.name}</div>
+//             <div className="text-center text-xs text-gray-500">Rs. {p.price}</div>
+//           </div>
+//         ))}
+//       </div>
+
+//       {/* Bottom action buttons */}
+//       <div className="flex gap-2 mt-4 p-2 border-t border-gray-200">
+//         <button
+//           onClick={onQuotation}
+//           className={`flex-1 py-2 rounded font-medium transition ${
+//             orderStatus === "quotation"
+//               ? "bg-blue-600 text-white"
+//               : "bg-blue-500 text-white hover:bg-blue-400"
+//           }`}
+//         >
+//           Quotation
+//         </button>
+
+//         <button
+//           onClick={onSuspend}
+//           className={`flex-1 py-2 rounded font-medium transition ${
+//             orderStatus === "suspend"
+//               ? "bg-yellow-700 text-white"
+//               : "bg-yellow-500 text-white hover:bg-yellow-600"
+//           }`}
+//         >
+//           Suspend
+//         </button>
+
+//         <button
+//           onClick={handleOpenPayment}
+//           disabled={totalPayable === 0}
+//           className={`flex-1 py-2 rounded font-bold text-white transition-all ${
+//             totalPayable === 0 ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 shadow-md"
+//           }`}
+//         >
+//           Payment
+//         </button>
+//       </div>
+
+//       {/* Payment Panel Overlay Backdrop */}
+//       {isPanelVisible && (
+//         <div
+//           className="fixed inset-0 bg-black/30 z-40"
+//           onClick={() => {
+//             setPaymentOpen(false);
+//             restoreAppFocus();
+//           }}
+//         />
+//       )}
+
+//       {/* Payment Panel */}
+//       <div
+//         className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl p-6 transition-transform duration-300 z-50 flex flex-col
+//         ${isPanelVisible ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"}`}
+//       >
+//         <div className="flex justify-between items-center mb-6">
+//           <h2 className="text-xl font-bold">Payment</h2>
+//           <button onClick={() => setPaymentOpen(false)} className="text-gray-400 hover:text-red-500 text-xl">✕</button>
+//         </div>
+
+//         <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center border-2 border-dashed border-gray-200">
+//           <div className="text-gray-500 text-xs uppercase mb-1">Total Payable</div>
+//           <div className="text-2xl font-black text-gray-800">Rs. {totalPayable.toFixed(2)}</div>
+//         </div>
+
+//         <div className="space-y-4 flex-1">
+//           <div>
+//             <label className="block mb-1 text-sm font-semibold text-gray-600">Method</label>
+//             <select
+//               value={paymentMethod}
+//               onChange={(e) => setPaymentMethod(e.target.value)}
+//               className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+//             >
+//               <option value="cash">Cash</option>
+//               <option value="card">Card</option>
+//               <option value="upi">UPI / QR</option>
+//             </select>
+//           </div>
+
+//           <div>
+//             <label className="block mb-1 text-sm font-semibold text-gray-600">Amount Paid</label>
+//             <input
+//               type="number"
+//               value={amount}
+//               onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+//               className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-400 outline-none font-mono text-lg"
+//             />
+//           </div>
+
+//           {amount > totalPayable && (
+//             <div className="p-3 bg-green-50 text-green-700 rounded-md flex justify-between text-sm">
+//               <span>Change:</span>
+//               <span className="font-bold">Rs. {(amount - totalPayable).toFixed(2)}</span>
+//             </div>
+//           )}
+//         </div>
+
+//         <button
+//           onClick={handleConfirmPayment}
+//           className="w-full bg-green-500 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-600 shadow-lg mt-auto transition-transform active:scale-95"
+//         >
+//           Confirm Payment
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
 
 
 

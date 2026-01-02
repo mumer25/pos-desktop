@@ -16,13 +16,17 @@ db.prepare(`
   )
 `).run();
 
+
+db.prepare(`DROP TABLE IF EXISTS items`).run();
+
 // Items table
 db.prepare(`
   CREATE TABLE IF NOT EXISTS items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     price REAL,
-    image TEXT
+    image TEXT,
+    category TEXT DEFAULT 'Uncategorized'
   )
 `).run();
 
@@ -69,15 +73,18 @@ if (customersCount === 0) {
 // Items
 const itemsCount = db.prepare(`SELECT COUNT(*) AS count FROM items`).get().count;
 if (itemsCount === 0) {
-  const insertItem = db.prepare(`INSERT INTO items (name, price, image) VALUES (?, ?, ?)`);
-  const items = [
-    ["Pasta", 300, "/items/food1.jpg"],
-    ["Burger", 500, "/items/food2.jpg"],
-    ["Pizza", 800, "/items/food3.jpg"],
-    ["Soda", 200, "/items/food4.jpg"],
-    ["Cola Next", 100, "/items/food5.jpg"]
-  ];
-  items.forEach(i => insertItem.run(i[0], i[1], i[2]));
+const insertItem = db.prepare(`INSERT INTO items (name, price, image, category) VALUES (?, ?, ?, ?)`);
+const items = [
+  ["Pasta", 300, "/items/food1.jpg", "Food"],
+  ["Burger", 500, "/items/food2.jpg", "Food"],
+  ["Pizza", 800, "/items/food3.jpg", "Food"],
+  ["Soda", 200, "/items/food4.jpg", "Drink"],
+  ["Cola Next", 100, "/items/food5.jpg", "Drink"]
+];
+
+items.forEach(i => insertItem.run(i[0], i[1], i[2], i[3]));
+
+
 }
 
 // ======= FUNCTIONS =======
