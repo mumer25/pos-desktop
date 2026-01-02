@@ -188,7 +188,7 @@ export default function ProductBrowser({
             >
               <option value="cash">Cash</option>
               <option value="card">Card</option>
-              <option value="upi">UPI / QR</option>
+              <option value="upi">Bank</option>
             </select>
           </div>
 
